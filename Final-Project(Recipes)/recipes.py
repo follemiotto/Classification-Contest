@@ -7,9 +7,9 @@ Original file is located at
     https://colab.research.google.com/drive/1gE8PWPdss5mB8PA6cWHwgsOSXock-qqO
 """
 
-from google.colab import drive
-drive.mount('/content/drive')
-fpath='/content/drive/MyDrive/recipes/'
+# from google.colab import drive
+# drive.mount('/content/drive')
+# fpath='/content/drive/MyDrive/recipes/'
 
 !pip install tomotopy
 
@@ -32,8 +32,8 @@ nlp = spacy.load('en_core_web_md')
 # frec = open(fpath+'RecipeNLG_dataset.csv')
 # rec=frec.readlines()
 number_of_documents=10000
-receitas=pd.read_csv(fpath+'RecipeNLG_dataset.csv',nrows=number_of_documents)
-#receitas=pd.read_csv('RecipeNLG_dataset.csv',nrows=number_of_documents)
+# receitas=pd.read_csv(fpath+'RecipeNLG_dataset.csv',nrows=number_of_documents)
+receitas=pd.read_csv('RecipeNLG_dataset.csv',nrows=number_of_documents)
 
 # for i in range(len(rec['title'])):
 #   if 'bible' in str(rec['title'][i]).lower():
