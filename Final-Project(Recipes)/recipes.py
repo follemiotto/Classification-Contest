@@ -25,7 +25,7 @@ ldamodel = tp.LDAModel
 spacy.cli.download("en_core_web_md")
 nlp = spacy.load('en_core_web_md')
 
-runplace = True
+runplace = False
 number_of_documents=10000
 
 if runplace:
