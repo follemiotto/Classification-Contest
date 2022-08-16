@@ -313,12 +313,22 @@ print('C_v:%.3f'%(topic_coher.get_coherence()))
 print('Topics with the highest coherence score the coherence for each topic.')
 myModel.top_topics(corpus=BoW,dictionary=dictionary,coherence='c_v',texts=bdocs,topn=5)
 
+plt.figure(figsize=(20,10))
 tops_frequency=[0]*74
+tops_f=[0]*74
 x=0
 for d in BoW:
   aux=myModel.get_document_topics(d,minimum_probability=0.5)
   if aux!=[]:
     tops_frequency[aux[0][0]]+=1
+plt.subplot(1, 2, 1)
+plt.bar(range(74),tops_frequency)
+for d in BoW:
+  aux=myModel.get_document_topics(d,minimum_probability=0.3)
+  if aux!=[]:
+    tops_f[aux[0][0]]+=1
+plt.subplot(1, 2, 2)
+plt.bar(range(74),tops_f)
 print(tops_frequency)
   # print(myModel.get_document_topics(d,minimum_probability=0.3)) #threshold
 for i in range(74):
@@ -331,6 +341,7 @@ aux2=[0]*10
 for i in range(10):
   aux2[i]=tops_frequency[i][1]
 print(aux2)
+plt.show()
 
 for i in aux2:
   print(myModel.show_topics(num_topics=74)[i])
@@ -511,3 +522,22 @@ lables.append("Soft desserts: Ice Cream, Pudding and others")
 
 for i,j in zip(aux2,lables):
   print(j,"\n",myModel.show_topics(num_topics=74)[i])
+
+full_frequency=[0]*74
+for i,d in enumerate(BoW):
+  aux=myModel.get_document_topics(d)
+  d=[0,0]
+  for j in aux:
+    if j[1]>d[1]:
+      d=j
+  full_frequency[d[0]]+=1
+  # print(myModel.get_document_topics(d))
+print(full_frequency)
+pol=0
+for i in full_frequency:
+  pol+=i
+print(pol)
+plt.figure(figsize=(20,10))
+plt.subplot(1, 2, 2)
+plt.bar(range(74),full_frequency)
+plt.show()
