@@ -7,10 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1gE8PWPdss5mB8PA6cWHwgsOSXock-qqO
 """
 
-# from google.colab import drive
-# drive.mount('/content/drive')
-# fpath='/content/drive/MyDrive/recipes/'
-
 !pip install tomotopy
 
 import matplotlib.pyplot as plt
@@ -29,35 +25,36 @@ ldamodel = tp.LDAModel
 spacy.cli.download("en_core_web_md")
 nlp = spacy.load('en_core_web_md')
 
-# frec = open(fpath+'RecipeNLG_dataset.csv')
-# rec=frec.readlines()
+runplace = True
 number_of_documents=10000
-# receitas=pd.read_csv(fpath+'RecipeNLG_dataset.csv',nrows=number_of_documents)
-receitas=pd.read_csv('RecipeNLG_dataset.csv',nrows=number_of_documents)
 
-# for i in range(len(rec['title'])):
-#   if 'bible' in str(rec['title'][i]).lower():
-#     print(rec['title'][i])
-#     print(rec['ingredients'][i])
-#     print(rec['directions'][i])
-#     print()
-#     print()
+if runplace:
+  from google.colab import drive
+  drive.mount('/content/drive')
+  fpath='/content/drive/MyDrive/recipes/'
+  receitas=pd.read_csv(fpath+'RecipeNLG_dataset.csv',nrows=number_of_documents)
+else:
+  receitas=pd.read_csv('RecipeNLG_dataset.csv',nrows=number_of_documents)
+
+"""#Table Content"""
+
 receitas.head()
 
 receitas.columns
 
-receitas.drop(['Unnamed: 0','link','source','ingredients'],axis=1,inplace=True)
-receitas.head()
+receitas2=receitas.drop(['Unnamed: 0','link','source','ingredients'],axis=1)
+receitas2.head()
 
-receitas.info()
+receitas2.info()
+
+"""#Lemma and Token"""
 
 docs=[]
 for i in range(number_of_documents):
   aux=""
-  aux+=receitas['title'][i].lower().replace("("," ").replace(")"," ")+" "
-  aux+=receitas['NER'][i].lower().replace("[", "").replace("]", "").replace("\"", "")+" "
-  # aux+=receitas['ingredients'][i].lower().replace("("," ").replace(")"," ").replace("[", "").replace("]", "").replace("\"", "").replace("tsp","tea_spoon").replace("tbsp","soup_spoon").replace("c.","cup").replace("oz","ounce").replace("lb","pound").replace("pkg","package")+" "
-  aux+=receitas['directions'][i].lower().replace("("," ").replace(")"," ").replace("[", "").replace("]", "").replace("\"", "")
+  aux+=receitas2['title'][i].lower().replace("("," ").replace(")"," ")+" "
+  aux+=receitas2['NER'][i].lower().replace("[", "").replace("]", "").replace("\"", "")+" "
+  aux+=receitas2['directions'][i].lower().replace("("," ").replace(")"," ").replace("[", "").replace("]", "").replace("\"", "")
   docs.append(aux)
 
 docslemma=[]
@@ -101,13 +98,12 @@ average doc : {}
 for i in k[:10]:
   print(i)
 
-plt.figure(figsize=(15,15))
-
 st=""
 for i in k:
   for j in i:
     st+=j+" "
-mycloud = wc.WordCloud().generate(st)
+mycloud = wc.WordCloud(max_words=4892,relative_scaling=1,width=1000,height=1000).generate(st)
+plt.figure(figsize=(15,15))
 plt.imshow(mycloud)
 
 sts=st.split()
@@ -132,18 +128,19 @@ for i in bdc[:10]:
 for i in bdocs[:10]:
   print(i)
 
+"""#BoW"""
+
 col_tokenized=bdocs
 dictionary=corpora.Dictionary()
 BoW=[dictionary.doc2bow(doc, allow_update=True) for doc in col_tokenized]
 print(BoW[:20])
 [print([(dictionary[id], count) for id, count in line]) for line in BoW[:20]]
 
-plt.figure(figsize=(15,15))
-
 st=""
 for i in bdc:
   st+=i+" "
-mycloud = wc.WordCloud().generate(st)
+mycloud = wc.WordCloud(max_words=4892,relative_scaling=1,width=1000,height=1000).generate(st)
+plt.figure(figsize=(15,15))
 plt.imshow(mycloud)
 
 def printTopics(mdl,p=None):
@@ -167,115 +164,30 @@ def printCoherence(mdl):
 		coh = tp.coherence.Coherence(mdl, coherence=preset)
 		average_coherence = coh.get_score()
 		coherence_per_topic = [coh.get_score(topic_id=k) for k in range(mdl.k)]
-		# print('==== Coherence : {} ===='.format(preset))
-		# print('Average:', average_coherence, '\nPer Topic:', coherence_per_topic)
-		# print()
 	return average_coherence
 
 def runModel(mdl,docs):
 	for i,d in enumerate(docs):
-		# print(i,end='')
-		#ch = d.split()
 		mdl.add_doc(d)
-		# print('\r\r\r\r\r\r\r\r\r\r',end='')
-	# print()
 	mdl.burn_in = 100
 	mdl.train(0)
-	# print('Num docs:', len(mdl.docs), ', Vocab size:', len(mdl.used_vocabs), ', Num words:', mdl.num_words)
-	# print('Removed top words:', mdl.removed_top_words)
-	# print('Training...', file=sys.stderr, flush=True)
 	for i in range(0, 2000, 10):
 		mdl.train(10)
-		# print('Iteration: {}\tLog-likelihood: {}'.format(i, mdl.ll_per_word))
     
 	mdl.summary()
-	# print('Saving...', file=sys.stderr, flush=True)
 	mdl.save('test.lda.bin', True)
 
-"""#Attempt 1"""
+"""#Tests
+
+##Attempt 1
+"""
 
 cv=[]
 R=range(100,1000,150)
-# model=1
-# if model==1 or model==0:
 for i in R:
-	# print('************************** Running LDA ***************************')
-	#cp=tp.utils.Corpus(tokenizer=tp.utils.SimpleTokenizer()) #tokenizer=tp.utils.SimpleTokenizer())
-	#cp.process(coll)
 	mdl = tp.LDAModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=i,seed=7773) #,corpus=cp
 	runModel(mdl,bdocs)
-	#    for n, line in enumerate(open(input_file, encoding='utf-8')):
-	# printTopics(mdl)
 	cv.append(printCoherence(mdl))
-
-# if model==2 or model==0:
-# 	print('************************** Running DMR ***************************')
-# 	mdl = tp.DMRModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=10,seed=7773) #,corpus=cp
-# 	runModel(mdl)
-# 	printTopics(mdl)
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 	printCoherence(mdl)
-
-# if model==3 or model==0:
-# 	print('************************** Running DTM ***************************')
-# 	mdl = tp.DTModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=10,seed=7773) #,corpus=cp
-# 	runModel(mdl)
-# 	printTopics(mdl,1)
-# 	#printCoherence(mdl)
-
-# if model==4 or model==0:
-# 	print('************************** Running CTM ***************************')
-# 	mdl = tp.CTModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=10)
-# 	runModel(mdl)
-# 	printTopics(mdl)
-# 	printCoherence(mdl)
-	
-# if model==5 or model==0:
-# 	print('************************** Running HDP ***************************')
-# 	mdl = tp.HDPModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, initial_k=10)
-# 	runModel(mdl)
-# 	printTopics(mdl)
-# 	printCoherence(mdl)
-
-# if model==6 or model==0:
-# 	print('************************** Running HLDA ***************************')
-# 	mdl = tp.HLDAModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5)
-# 	runModel(mdl)
-# 	printTopics(mdl)
-# 	printCoherence(mdl)
-
-# if model==7 or model==0:
-# 	print('************************** Running MGLDA ***************************')
-# 	mdl = tp.MGLDAModel (tw=tp.TermWeight.IDF, min_cf=3, rm_top=5,k_g=10,k_l=10)
-# 	runModel(mdl)
-# 	printTopics(mdl)
-# 	printCoherence(mdl)
-
-# if model==8 or model==0:
-# 	print('************************** Running PA ***************************')
-# 	mdl = tp.PAModel (tw=tp.TermWeight.IDF, min_cf=3, rm_top=5,k1=10,k2=10)
-# 	runModel(mdl)
-# 	printTopics(mdl,2)
-# 	printCoherence(mdl)
-
-# if model==9 or model==0:
-# 	print('************************** Running HPA ***************************')
-# 	mdl = tp.HPAModel (tw=tp.TermWeight.IDF, min_cf=3, rm_top=5,k1=10,k2=10)
-# 	runModel(mdl)
-# 	printTopics(mdl)
-# 	printCoherence(mdl)
 
 plt.figure(figsize=(5,5))
 plt.plot(list(R),cv,marker='o')
@@ -283,7 +195,7 @@ plt.grid(True)
 plt.show()
 print(max(zip(cv,list(R))))
 
-"""#Attempt 2"""
+"""##Attempt 2"""
 
 cv=[]
 R=range(200,300,15)
@@ -298,7 +210,7 @@ plt.grid(True)
 plt.show()
 print(max(zip(cv,list(R))))
 
-"""#Attempt 3"""
+"""##Attempt 3"""
 
 cv=[]
 R=range(180,220,5)
@@ -313,12 +225,12 @@ plt.grid(True)
 plt.show()
 print(max(zip(cv,list(R))))
 
-"""#Results"""
+"""##Results"""
 
 mdl = tp.LDAModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=200,seed=7773)
 runModel(mdl,bdocs)
 
-"""#A Idea"""
+"""##An Idea"""
 
 cv=[]
 R=range(2,100,5)
@@ -346,9 +258,36 @@ plt.grid(True)
 plt.show()
 print(max(zip(cv,list(R))))
 
+"""##True Result"""
+
+cv=[]
+R=range(900,1000,99)
+for i in R:
+	mdl = tp.LDAModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=i,seed=7773)
+	runModel(mdl,bdocs)
+	cv.append(printCoherence(mdl))
+
+plt.figure(figsize=(5,5))
+plt.plot(list(R),cv,marker='o')
+plt.grid(True)
+plt.show()
+print(max(zip(cv,list(R))))
+
+cv=[]
+R=range(800,1000,49)
+for i in R:
+	mdl = tp.LDAModel(tw=tp.TermWeight.IDF, min_cf=3, rm_top=5, k=i,seed=7773)
+	runModel(mdl,bdocs)
+	cv.append(printCoherence(mdl))
+
+plt.figure(figsize=(5,5))
+plt.plot(list(R),cv,marker='o')
+plt.grid(True)
+plt.show()
+print(max(zip(cv,list(R))))
+
 """#Model"""
 
-from gensim.models import LdaModel
 myModel = LdaModel(corpus = BoW,num_topics= 74, random_state= 27644437, id2word = dictionary, alpha = 'auto',per_word_topics = True,passes = 100)
 for t in myModel.show_topics():
   print(t)
@@ -373,3 +312,202 @@ print('C_v:%.3f'%(topic_coher.get_coherence()))
 # top topics
 print('Topics with the highest coherence score the coherence for each topic.')
 myModel.top_topics(corpus=BoW,dictionary=dictionary,coherence='c_v',texts=bdocs,topn=5)
+
+tops_frequency=[0]*74
+x=0
+for d in BoW:
+  aux=myModel.get_document_topics(d,minimum_probability=0.5)
+  if aux!=[]:
+    tops_frequency[aux[0][0]]+=1
+print(tops_frequency)
+  # print(myModel.get_document_topics(d,minimum_probability=0.3)) #threshold
+for i in range(74):
+  aux1=[tops_frequency[i],i]
+  tops_frequency[i]=aux1
+tops_frequency.sort()
+tops_frequency.reverse()
+print(tops_frequency)
+aux2=[0]*10
+for i in range(10):
+  aux2[i]=tops_frequency[i][1]
+print(aux2)
+
+for i in aux2:
+  print(myModel.show_topics(num_topics=74)[i])
+
+myModel.top_topics(corpus=BoW,dictionary=dictionary,coherence='c_v',texts=bdocs,topn=10)[:10]
+
+# aux2=[56, 27, 31, 37, 19, 34, 44, 62, 47, 25]
+aux2+=[33,16,46,58,40]
+for i in aux2:
+  print(myModel.show_topics(num_topics=74)[i])
+
+"""#Labeling"""
+
+ddd=[]
+for j in aux2:
+  ddd2=[]
+  for i,d in enumerate(BoW):
+    if len(ddd)<10:
+      aux=myModel.get_document_topics(d,minimum_probability=0.5)
+    else:
+      aux=myModel.get_document_topics(d,minimum_probability=0.3)
+    if aux!=[]:
+      if aux[0][0]==j:
+        ddd2.append(i)
+        # print(aux[0],':',i,bdocs[i])
+  ddd.append(ddd2)
+
+for i in ddd:
+  print(len(i),end=" ")
+
+receitas.head()
+
+"""##seeing all the recipes per topic"""
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', 1)
+
+lables=[]
+
+"""###topic 0"""
+
+print(myModel.show_topics(num_topics=74)[aux2[0]])
+
+receitasaux=receitas.iloc[ddd[0]]
+receitasaux.head(82)
+
+lables.append("Sweet breads: Breads, Cakes and Muffins")
+
+"""###topic 1"""
+
+print(myModel.show_topics(num_topics=74)[aux2[1]])
+
+receitasaux=receitas.iloc[ddd[1]]
+receitasaux.head(82)
+
+lables.append("Hard dough: Cookies, Pies and Brownies")
+
+"""###topic 2"""
+
+print(myModel.show_topics(num_topics=74)[aux2[2]])
+
+receitasaux=receitas.iloc[ddd[2]]
+receitasaux.head(82)
+
+lables.append("Meat lunch: Beans, Steak, Pasta and Sauces")
+
+"""###topic 3"""
+
+print(myModel.show_topics(num_topics=74)[aux2[3]])
+
+receitasaux=receitas.iloc[ddd[3]]
+receitasaux.head(82)
+
+lables.append("Pound Cakes")
+
+"""###topic 4"""
+
+print(myModel.show_topics(num_topics=74)[aux2[4]])
+
+receitasaux=receitas.iloc[ddd[4]]
+receitasaux.head(82)
+
+lables.append("Dough: Bread, Rolls, Buns and Pizza dough")
+
+"""###topic 5"""
+
+print(myModel.show_topics(num_topics=74)[aux2[5]])
+
+receitasaux=receitas.iloc[ddd[5]]
+receitasaux.head(82)
+
+lables.append("Slaw and Salads")
+
+"""###topic 6"""
+
+print(myModel.show_topics(num_topics=74)[aux2[6]])
+
+receitasaux=receitas.iloc[ddd[6]]
+receitasaux.head(82)
+
+lables.append("Fruit Salad")
+
+"""###topic 7"""
+
+print(myModel.show_topics(num_topics=74)[aux2[7]])
+
+receitasaux=receitas.iloc[ddd[7]]
+receitasaux.head(82)
+
+lables.append("Baked Snacks")
+
+"""###topic 8"""
+
+print(myModel.show_topics(num_topics=74)[aux2[8]])
+
+receitasaux=receitas.iloc[ddd[8]]
+receitasaux.head(82)
+
+lables.append("Soup")
+
+"""###topic 9"""
+
+print(myModel.show_topics(num_topics=74)[aux2[9]])
+
+receitasaux=receitas.iloc[ddd[9]]
+receitasaux.head(82)
+
+lables.append("Casserole")
+
+"""###topic 10"""
+
+print(myModel.show_topics(num_topics=74)[aux2[10]])
+
+receitasaux=receitas.iloc[ddd[10]]
+receitasaux.head(82)
+
+lables.append("Bars, Snacks and other Desserts")
+
+"""###topic 11"""
+
+print(myModel.show_topics(num_topics=74)[aux2[11]])
+
+receitasaux=receitas.iloc[ddd[11]]
+receitasaux.head(82)
+
+lables.append("Chili dishes and Pastas")
+
+"""###topic 12"""
+
+print(myModel.show_topics(num_topics=74)[aux2[12]])
+
+receitasaux=receitas.iloc[ddd[12]]
+receitasaux.head(82)
+
+lables.append("Baked dishes with dry seeds")
+
+"""###topic 13"""
+
+print(myModel.show_topics(num_topics=74)[aux2[13]])
+
+receitasaux=receitas.iloc[ddd[13]]
+receitasaux.head(82)
+
+lables.append("Pizzas, Lasagnas and other dishes with Cheese")
+
+"""###topic 14"""
+
+print(myModel.show_topics(num_topics=74)[aux2[14]])
+
+receitasaux=receitas.iloc[ddd[14]]
+receitasaux.head(82)
+
+lables.append("Soft desserts: Ice Cream, Pudding and others")
+
+"""#Result"""
+
+for i,j in zip(aux2,lables):
+  print(j,"\n",myModel.show_topics(num_topics=74)[i])
